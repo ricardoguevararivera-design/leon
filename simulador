@@ -1,0 +1,486 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>El Ojo de los Justos - MVP</title>
+    <!-- Estilos para que parezca una APP de verdad -->
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Segoe UI', system-ui, -apple-system, sans-serif; }
+        body {
+            background: #0a0e17;
+            color: #e6edf3;
+            padding-bottom: 80px; /* espacio para el menú inferior */
+            min-height: 100vh;
+        }
+        /* BARRA SUPERIOR */
+        .header {
+            background: #0d1117;
+            padding: 18px 20px 10px;
+            border-bottom: 1px solid #21262d;
+            position: sticky;
+            top: 0;
+            z-index: 10;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .header h1 { font-size: 1.2rem; color: #f85149; letter-spacing: 1px; }
+        .header .badge-version { background: #21262d; padding: 4px 12px; border-radius: 20px; font-size: 0.6rem; color: #8b949e; border: 1px solid #30363d; }
+        
+        /* CONTENEDOR DE PÁGINAS */
+        .page {
+            display: none;
+            padding: 16px 20px 30px;
+            animation: fadeUp 0.3s ease;
+        }
+        .page.active { display: block; }
+        @keyframes fadeUp { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+
+        /* MENÚ INFERIOR (TIPO APP) */
+        .bottom-nav {
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            width: 100%;
+            background: #0d1117;
+            border-top: 1px solid #21262d;
+            display: flex;
+            justify-content: space-around;
+            padding: 8px 0 env(safe-area-inset-bottom);
+            z-index: 20;
+        }
+        .nav-item {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            background: transparent;
+            border: none;
+            color: #8b949e;
+            font-size: 0.65rem;
+            padding: 4px 12px;
+            cursor: pointer;
+            transition: 0.2s;
+            border-radius: 8px;
+        }
+        .nav-item .icon { font-size: 1.8rem; line-height: 1; }
+        .nav-item.active { color: #f85149; }
+        .nav-item.active .icon { transform: scale(1.1); }
+
+        /* TARJETAS */
+        .card {
+            background: #161b22;
+            border: 1px solid #30363d;
+            border-radius: 16px;
+            padding: 18px;
+            margin-bottom: 20px;
+        }
+        .card-title { font-weight: 700; margin-bottom: 12px; font-size: 1.1rem; color: #f0f6fc; }
+        .card-sub { color: #8b949e; font-size: 0.85rem; margin-bottom: 15px; }
+
+        /* INPUTS Y FORMULARIOS */
+        label { display: block; font-weight: 600; margin: 15px 0 6px; font-size: 0.9rem; }
+        select, textarea, input[type="file"] {
+            width: 100%;
+            padding: 12px;
+            background: #0d1117;
+            border: 1px solid #30363d;
+            border-radius: 10px;
+            color: white;
+            font-size: 1rem;
+        }
+        textarea { height: 80px; resize: vertical; }
+        
+        /* BOTONES */
+        .btn {
+            width: 100%;
+            padding: 15px;
+            border: none;
+            border-radius: 50px;
+            font-weight: 700;
+            font-size: 1rem;
+            cursor: pointer;
+            margin-top: 16px;
+            transition: 0.2s;
+        }
+        .btn-danger { background: #da3633; color: white; }
+        .btn-danger:active { transform: scale(0.97); }
+        .btn-success { background: #238636; color: white; }
+        .btn-primary { background: #1f6feb; color: white; }
+        .btn-outline { background: transparent; border: 1px solid #30363d; color: white; }
+
+        /* LISTAS DE ITEMS */
+        .item-reporte {
+            background: #0d1117;
+            padding: 14px;
+            border-radius: 12px;
+            margin-bottom: 12px;
+            border-left: 5px solid #f85149;
+        }
+        .item-reporte.resuelto { border-left-color: #238636; opacity: 0.7; }
+        .item-reporte .row { display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 6px; }
+        .tag {
+            display: inline-block;
+            padding: 2px 12px;
+            border-radius: 30px;
+            font-size: 0.7rem;
+            font-weight: 600;
+        }
+        .tag-red { background: #da3633; color: white; }
+        .tag-yellow { background: #d29922; color: black; }
+        .tag-green { background: #238636; color: white; }
+        .tag-gray { background: #21262d; color: #8b949e; }
+
+        .grid-2 {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 12px;
+        }
+        .grid-2 .poli-card {
+            background: #0d1117;
+            padding: 12px;
+            border-radius: 12px;
+            text-align: center;
+            border: 1px solid #21262d;
+        }
+        .poli-card .estado {
+            font-size: 0.7rem;
+            margin-top: 4px;
+        }
+
+        /* TABLA BASE DE DATOS */
+        .db-table { width: 100%; border-collapse: collapse; font-size: 0.8rem; }
+        .db-table th { text-align: left; padding: 8px 4px; border-bottom: 2px solid #30363d; }
+        .db-table td { padding: 8px 4px; border-bottom: 1px solid #21262d; }
+
+        /* UTILIDADES */
+        .mt-2 { margin-top: 12px; }
+        .text-center { text-align: center; }
+        .text-muted { color: #8b949e; font-size: 0.85rem; }
+        .flex { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
+        
+        /* SIMULADOR DE MAPA */
+        .mapa-simulado {
+            background: #0d1117;
+            height: 120px;
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border: 1px dashed #30363d;
+            color: #8b949e;
+            font-size: 0.8rem;
+            margin: 10px 0;
+        }
+    </style>
+</head>
+<body>
+
+<!-- ========== BARRA SUPERIOR ========== -->
+<div class="header">
+    <h1>👁️ OJO DE LOS JUSTOS</h1>
+    <span class="badge-version">PROTOTIPO DEMO</span>
+</div>
+
+<!-- ========== PÁGINA 1: CIUDADANO ========== -->
+<div id="page-ciudadano" class="page active">
+    <div class="card">
+        <div class="card-title">📝 Reporte Anónimo</div>
+        <div class="card-sub">Simula un reporte desde tu celular. Todo es anónimo.</div>
+        <label>Tipo de incidente</label>
+        <select id="tipoIncidente">
+            <option>💊 Venta de sustancias</option>
+            <option>🔫 Presencia de armas</option>
+            <option>⛓️ Retención ilegal</option>
+            <option>👊 Riña callejera</option>
+            <option>🕵️ Prófugo avistado</option>
+        </select>
+        <label>Comentario</label>
+        <textarea id="comentario" placeholder="Ej: 3 sujetos armados en la esquina..."></textarea>
+        <label>Adjuntar evidencia (simulado)</label>
+        <input type="file" id="evidencia" accept="image/,video/,audio/*">
+        <button class="btn btn-danger" onclick="enviarReporte()">🚨 ENVIAR ALERTA</button>
+        <div id="mensajeCiudadano" class="text-muted mt-2"></div>
+    </div>
+    <div class="card">
+        <div class="card-title">📋 Mis Reportes</div>
+        <div id="misReportes" class="text-muted">Aún no has enviado nada.</div>
+    </div>
+</div>
+
+<!-- ========== PÁGINA 2: POLICÍA ========== -->
+<div id="page-policia" class="page">
+    <div class="card">
+        <div class="card-title">📡 Los 10 más cercanos</div>
+        <div class="card-sub">Agentes que reciben la alerta en bloque.</div>
+        <div class="grid-2" id="listaPolicias">
+            <!-- Se llena con JS -->
+        </div>
+    </div>
+    <div class="card">
+        <div class="card-title">🚨 Reportes Activos</div>
+        <div id="listaReportesPolicia" class="text-muted">Esperando reportes...</div>
+    </div>
+</div>
+
+<!-- ========== PÁGINA 3: CENTRAL ========== -->
+<div id="page-central" class="page">
+    <div class="grid-2">
+        <div class="card">
+            <div class="card-title">📊 Dashboard</div>
+            <p>Total: <strong id="totalReportes">0</strong></p>
+            <p>Pendientes: <strong id="totalPendientes">0</strong></p>
+            <p>Resueltos: <strong id="totalResueltos">0</strong></p>
+            <div class="mapa-simulado">🗺️ Mapa de calor (simulado)</div>
+            <div class="card-title" style="font-size:0.9rem;">Estado Agentes</div>
+            <div id="estadoAgentesCentral"></div>
+        </div>
+        <div class="card">
+            <div class="card-title">🗃️ Base de Datos</div>
+            <div id="baseDatosCentral" style="max-height:300px; overflow-y:auto;">
+                <span class="text-muted">Sin registros.</span>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- ========== MENÚ INFERIOR (NAV) ========== -->
+<div class="bottom-nav">
+    <button class="nav-item active" onclick="cambiarPagina('ciudadano', this)">
+        <span class="icon">👤</span>
+        <span>Ciudadano</span>
+    </button>
+    <button class="nav-item" onclick="cambiarPagina('policia', this)">
+        <span class="icon">👮</span>
+        <span>Policía</span>
+    </button>
+    <button class="nav-item" onclick="cambiarPagina('central', this)">
+        <span class="icon">📊</span>
+        <span>Central</span>
+    </button>
+</div>
+
+<script>
+    // ==========================================================
+    // ===== CEREBRO DE LA APLICACIÓN (SIMULADOR) =====
+    // ==========================================================
+
+    // Base de datos local (se borra al recargar)
+    let reportes = [];
+    let idCounter = 1;
+
+    // 10 Policías simulados
+    const POLICIAS = [
+        { id: 'P-01', nombre: 'Carlos R.', estado: 'Disponible' },
+        { id: 'P-02', nombre: 'Laura G.', estado: 'Disponible' },
+        { id: 'P-03', nombre: 'Andrés H.', estado: 'Disponible' },
+        { id: 'P-04', nombre: 'Marta D.', estado: 'Disponible' },
+        { id: 'P-05', nombre: 'Jorge L.', estado: 'Disponible' },
+        { id: 'P-06', nombre: 'Sofía R.', estado: 'Disponible' },
+        { id: 'P-07', nombre: 'Luis T.', estado: 'Disponible' },
+        { id: 'P-08', nombre: 'Ana M.', estado: 'Disponible' },
+        { id: 'P-09', nombre: 'Diego C.', estado: 'Disponible' },
+        { id: 'P-10', nombre: 'Elena P.', estado: 'Disponible' }
+    ];
+
+    // --- Función para cambiar de página (APP) ---
+    function cambiarPagina(pageId, btn) {
+        // Ocultar todas
+        document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+        // Mostrar la seleccionada
+        document.getElementById('page-' + pageId).classList.add('active');
+        // Cambiar estilo del nav
+        document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+        if (btn) btn.classList.add('active');
+        
+        // Actualizar datos al cambiar
+        actualizarVistas();
+    }
+
+    // --- Función ENVIAR REPORTE (Ciudadano) ---
+    function enviarReporte() {
+        const tipo = document.getElementById('tipoIncidente').value;
+        const comentario = document.getElementById('comentario').value.trim() || 'Sin detalles.';
+        const archivo = document.getElementById('evidencia').files[0];
+        const nombreArchivo = archivo ? archivo.name : 'Sin evidencia';
+
+        const nuevo = {
+            id: idCounter++,
+            tipo: tipo,
+            comentario: comentario,
+            evidencia: nombreArchivo,
+            estado: 'Pendiente', // Pendiente -> En camino -> Resuelto
+            policiaAsignado: null,
+            timestamp: new Date().toLocaleTimeString()
+        };
+
+        reportes.push(nuevo);
+        document.getElementById('mensajeCiudadano').innerHTML = ✅ Alerta #${nuevo.id} enviada. Notificando a los 10 agentes...;
+
+        // SIMULAR: Asignación automática a un policía disponible después de 1.5 segundos
+        setTimeout(() => {
+            const pendiente = reportes.find(r => r.id === nuevo.id && r.estado === 'Pendiente');
+            if (pendiente) {
+                const libre = POLICIAS.find(p => p.estado === 'Disponible');
+                if (libre) {
+                    pendiente.estado = 'En camino';
+                    pendiente.policiaAsignado = libre.nombre;
+                    libre.estado = 'Ocupado';
+                } else {
+                    // Si no hay libres, queda pendiente (simulación)
+                }
+                actualizarVistas();
+            }
+        }, 1500);
+
+        // Limpiar archivo (opcional) y actualizar
+        document.getElementById('evidencia').value = '';
+        actualizarVistas();
+    }
+
+    // --- Función LLEGAR AL LUGAR (Policía) ---
+    function llegarAlLugar(reporteId) {
+        // Solicitar PIN
+        const pin = prompt('🔐 Ingrese PIN Institucional (Simulado: 1234):');
+        if (pin !== '1234') {
+            alert('❌ PIN INCORRECTO. Acción cancelada.');
+            return;
+        }
+
+        const reporte = reportes.find(r => r.id === reporteId);
+        if (!reporte) return;
+        if (reporte.estado === 'Resuelto') { alert('Caso ya cerrado.'); return; }
+
+        // Marcar como resuelto
+        reporte.estado = 'Resuelto';
+        // Liberar al policía
+        if (reporte.policiaAsignado) {
+            const poli = POLICIAS.find(p => p.nombre === reporte.policiaAsignado);
+            if (poli) poli.estado = 'Disponible';
+        }
+        alert('✅ Caso cerrado exitosamente. ¡Buen trabajo!');
+        actualizarVistas();
+    }
+
+    // --- Funciones de RENDERIZADO (actualizan las vistas) ---
+
+    function actualizarVistas() {
+        actualizarPolicias();
+        actualizarCentral();
+        actualizarMisReportes();
+    }
+
+    // Vista de Policías
+    function actualizarPolicias() {
+        // 1. Los 10 agentes
+        let htmlPoli = '';
+        POLICIAS.forEach(p => {
+            const color = p.estado === 'Disponible' ? '🟢' : (p.estado === 'Ocupado' ? '🟡' : '🔴');
+            htmlPoli += `<div class="poli-card">
+                <strong>${p.nombre}</strong><br>
+                <span class="estado">${color} ${p.estado}</span>
+            </div>`;
+        });
+        document.getElementById('listaPolicias').innerHTML = htmlPoli;
+
+        // 2. Reportes activos para los policías
+        if (reportes.length === 0) {
+            document.getElementById('listaReportesPolicia').innerHTML = '<span class="text-muted">No hay reportes.</span>';
+            return;
+        }
+
+        let htmlRep = '';
+        // Mostrar los más recientes primero
+        const copia = [...reportes].reverse();
+        copia.forEach(r => {
+            const esResuelto = r.estado === 'Resuelto';
+            const tagColor = r.estado === 'Pendiente' ? 'tag-red' : (r.estado === 'En camino' ? 'tag-yellow' : 'tag-green');
+            htmlRep += `
+                <div class="item-reporte ${esResuelto ? 'resuelto' : ''}">
+                    <div class="row">
+                        <div><strong>#${r.id}</strong> ${r.tipo}</div>
+                        <span class="tag ${tagColor}">${r.estado}</span>
+                    </div>
+                    <div style="font-size:0.85rem; color:#8b949e; margin:6px 0;">${r.comentario}</div>
+                    <div class="row" style="font-size:0.8rem;">
+                        <span>👮 ${r.policiaAsignado || 'Sin asignar'}</span>
+                        <span>⏱️ ${r.timestamp}</span>
+                    </div>
+                    ${r.estado === 'En camino' ? `
+                        <button class="btn btn-success" style="padding:10px; margin-top:10px; width:100%;" onclick="llegarAlLugar(${r.id})">
+                            📍 Llegué al lugar (verificar PIN)
+                        </button>
+                    ` : ''}
+                    ${r.estado === 'Pendiente' ? '<span class="text-muted" style="font-size:0.8rem;">⏳ Esperando asignación...</span>' : ''}
+                </div>
+            `;
+        });
+        document.getElementById('listaReportesPolicia').innerHTML = htmlRep;
+    }
+
+    // Vista de Central
+    function actualizarCentral() {
+        const total = reportes.length;
+        const resueltos = reportes.filter(r => r.estado === 'Resuelto').length;
+        const pendientes = reportes.filter(r => r.estado !== 'Resuelto').length;
+
+        document.getElementById('totalReportes').textContent = total;
+        document.getElementById('totalPendientes').textContent = pendientes;
+        document.getElementById('totalResueltos').textContent = resueltos;
+
+        // Estado agentes central
+        let htmlAg = '';
+        POLICIAS.forEach(p => {
+            const icon = p.estado === 'Disponible' ? '🟢' : (p.estado === 'Ocupado' ? '🟡' : '🔴');
+            htmlAg += `<div style="display:flex; justify-content:space-between; border-bottom:1px solid #21262d; padding:4px 0;">
+                <span>${p.nombre}</span> <span>${icon} ${p.estado}</span>
+            </div>`;
+        });
+        document.getElementById('estadoAgentesCentral').innerHTML = htmlAg;
+
+        // Base de Datos (Tabla)
+        if (reportes.length === 0) {
+            document.getElementById('baseDatosCentral').innerHTML = '<span class="text-muted">No hay registros en la base de datos.</span>';
+            return;
+        }
+        let htmlDB = `<table class="db-table">
+            <tr><th>ID</th><th>Tipo</th><th>Estado</th><th>Policía</th></tr>`;
+        const copiaDB = [...reportes].reverse();
+        copiaDB.forEach(r => {
+            const icon = r.estado === 'Resuelto' ? '✅' : (r.estado === 'En camino' ? '⏳' : '❌');
+            htmlDB += <tr><td>${r.id}</td><td>${r.tipo}</td><td>${icon} ${r.estado}</td><td>${r.policiaAsignado || 'N/A'}</td></tr>;
+        });
+        htmlDB += '</table>';
+        document.getElementById('baseDatosCentral').innerHTML = htmlDB;
+    }
+
+    // Vista de "Mis Reportes" (Ciudadano)
+    function actualizarMisReportes() {
+        const cont = document.getElementById('misReportes');
+        if (reportes.length === 0) { cont.innerHTML = 'Aún no has enviado nada.'; return; }
+        let html = '';
+        const copia = [...reportes].reverse();
+        copia.forEach(r => {
+            html += `<div style="background:#0d1117; padding:10px; border-radius:10px; margin-bottom:8px; border-left:3px solid #f85149;">
+                <strong>#${r.id}</strong> ${r.tipo} 
+                <span class="tag ${r.estado === 'Resuelto' ? 'tag-green' : 'tag-red'}" style="font-size:0.6rem;">${r.estado}</span>
+                <div style="font-size:0.8rem; color:#8b949e;">${r.comentario}</div>
+            </div>`;
+        });
+        cont.innerHTML = html;
+    }
+
+    // --- Carga de datos de muestra para que no se vea vacío ---
+    function cargarMuestra() {
+        const m1 = { id: idCounter++, tipo: '💊 Venta de sustancias', comentario: 'Esquina calle 10 con carrera 5.', evidencia: 'N/A', estado: 'Resuelto', policiaAsignado: 'Carlos R.', timestamp: '10:30:20' };
+        const m2 = { id: idCounter++, tipo: '🔫 Presencia de armas', comentario: 'Taxi blanco con dos sujetos armados.', evidencia: 'N/A', estado: 'En camino', policiaAsignado: 'Laura G.', timestamp: '11:15:45' };
+        reportes.push(m1, m2);
+        POLICIAS.find(p => p.nombre === 'Carlos R.').estado = 'Disponible';
+        POLICIAS.find(p => p.nombre === 'Laura G.').estado = 'Ocupado';
+        actualizarVistas();
+    }
+
+    cargarMuestra();
+</script>
+</body>
+</html>
