@@ -1,0 +1,113 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>El Ojo de los Justos - Funcional</title>
+    <style>
+        /* ... (Mantén todo tu CSS exacto como estaba) ... */
+    </style>
+    
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+</head>
+<body>
+
+<script>
+    // ==========================================================
+    // ===== CONEXIÓN AL BACKEND REAL (SUPABASE) =====
+    // ==========================================================
+
+    // 2. INICIALIZAR EL CLIENTE (Reemplaza con tus datos reales)
+    const { createClient } = supabase;
+    const supabaseUrl = 'https://TU_PROYECTO.supabase.co'; 
+    const supabaseKey = 'TU_CLAVE_ANONIMA_AQUI';
+    const client = createClient(supabaseUrl, supabaseKey);
+
+    let reportes = [];
+    
+    // Tus policías (Esto eventualmente también debería venir de la base de datos)
+    const POLICIAS = [
+        { id: 'P-01', nombre: 'Carlos R.', estado: 'Disponible' },
+        { id: 'P-02', nombre: 'Laura G.', estado: 'Disponible' }
+        // ...
+    ];
+
+    // --- FUNCIÓN ASÍNCRONA: ENVIAR REPORTE (Ciudadano) ---
+    async function enviarReporte() {
+        const tipo = document.getElementById('tipoIncidente').value;
+        const comentario = document.getElementById('comentario').value.trim() || 'Sin detalles.';
+        
+        // Deshabilitar botón para evitar dobles envíos
+        const btn = document.querySelector('.btn-danger');
+        btn.textContent = 'Enviando...';
+        btn.disabled = true;
+
+        // Insertar registro en la base de datos real
+        const { data, error } = await client
+            .from('reportes')
+            .insert([
+                { 
+                    tipo: tipo, 
+                    comentario: comentario, 
+                    estado: 'Pendiente'
+                }
+            ]);
+
+        if (error) {
+            console.error("Error en la BD:", error);
+            document.getElementById('mensajeCiudadano').innerHTML = '❌ Hubo un error al enviar.';
+        } else {
+            document.getElementById('mensajeCiudadano').innerHTML = '✅ Alerta enviada exitosamente a la central.';
+            document.getElementById('comentario').value = ''; // Limpiar campo
+        }
+
+        // Restaurar botón
+        btn.textContent = '🚨 ENVIAR ALERTA';
+        btn.disabled = false;
+    }
+
+    // --- CARGA INICIAL: TRAER DATOS DE LA BD ---
+    async function cargarReportesHistoricos() {
+        const { data, error } = await client
+            .from('reportes')
+            .select('*')
+            .order('created_at', { ascending: false }); // Los más nuevos primero
+
+        if (!error && data) {
+            reportes = data;
+            actualizarVistas(); // Tu función original de renderizado
+        }
+    }
+
+    // --- TIEMPO REAL: ESCUCHAR NUEVOS REPORTES (Policía / Central) ---
+    // Esto reemplaza tu setTimeout de 1.5 segundos simulado.
+    // Cuando cualquier ciudadano envíe un reporte desde cualquier teléfono,
+    // esta función se dispara al instante en las pantallas de la central.
+    client
+        .channel('cambios-db')
+        .on(
+            'postgres_changes',
+            {
+                event: 'INSERT', // Escuchar inserciones nuevas
+                schema: 'public',
+                table: 'reportes'
+            },
+            (payload) => {
+                console.log('¡Alerta recibida en tiempo real!', payload.new);
+                
+                // Añadir el nuevo reporte a nuestra memoria local
+                reportes.unshift(payload.new); // Ponerlo de primero
+                
+                // Renderizar de nuevo las pantallas
+                actualizarVistas();
+                
+                // Aquí podrías disparar un sonido de alarma en la central
+                // const audio = new Audio('alarma.mp3'); audio.play();
+            }
+        )
+        .subscribe();
+
+    // --- Funciones de navegación y renderizado (Mantenlas igual) ---
+    function cambiarPagina(pageId, btn) { /* ... tu código ... */ }
+    function actualizarVistas() { /* ... tu código ... */ }
+    function actualizar
