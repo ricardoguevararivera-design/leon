@@ -2,485 +2,332 @@
 <html lang="es">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>El Ojo de los Justos - MVP</title>
-    <!-- Estilos para que parezca una APP de verdad -->
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Alerta Anónima - Simulador de Doble Vista Activa</title>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/ol@v8.2.0/ol.css">
     <style>
-        * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Segoe UI', system-ui, -apple-system, sans-serif; }
         body {
-            background: #0a0e17;
-            color: #e6edf3;
-            padding-bottom: 80px; /* espacio para el menú inferior */
-            min-height: 100vh;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            margin: 0;
+            padding: 0;
+            background-color: #0b0f19;
+            color: #f8fafc;
+            display: flex;
+            height: 100vh;
+            overflow: hidden;
         }
-        /* BARRA SUPERIOR */
-        .header {
-            background: #0d1117;
-            padding: 18px 20px 10px;
-            border-bottom: 1px solid #21262d;
-            position: sticky;
-            top: 0;
-            z-index: 10;
+
+        /* DISEÑO DE PANTALLA DIVIDIDA */
+        .panel-split {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            height: 100%;
+            position: relative;
+        }
+
+        /* Lado Izquierdo: Aplicación Ciudadana */
+        #vista-ciudadano {
+            background-color: #111827;
+            border-right: 4px solid #3b82f6;
+        }
+
+        /* Lado Derecho: Centro de Comando Policial */
+        #vista-policia {
+            background-color: #0f172a;
+        }
+
+        /* ENCABEZADOS */
+        .panel-header {
+            padding: 15px 20px;
+            font-size: 1.1rem;
+            font-weight: bold;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            border-bottom: 2px solid #1f2937;
+        }
+        .badge {
+            padding: 4px 10px;
+            border-radius: 4px;
+            font-size: 0.75rem;
+            font-weight: bold;
+        }
+        .badge-citizen { background-color: #2563eb; color: white; }
+        .badge-police { background-color: #1e3a8a; color: #93c5fd; border: 1px solid #3b82f6; }
+
+        /* ÁREA DE CONTENIDO */
+        .panel-body {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            position: relative;
+        }
+
+        #map {
+            width: 100%;
+            height: 100%;
+        }
+
+        /* CONTROLES CIUDADANOS Overlay */
+        .citizen-controls {
+            position: absolute;
+            bottom: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            background-color: rgba(17, 24, 39, 0.95);
+            padding: 15px;
+            border-radius: 12px;
+            border: 1px solid #3b82f6;
+            width: 85%;
+            box-shadow: 0 10px 25px rgba(0,0,0,0.5);
+            z-index: 1000;
+        }
+        .btn-report {
+            width: 100%;
+            background-color: #ef4444;
+            color: white;
+            border: none;
+            padding: 12px;
+            font-weight: bold;
+            border-radius: 6px;
+            cursor: pointer;
+            text-transform: uppercase;
+            transition: background 0.2s;
+        }
+        .btn-report:hover { background-color: #dc2626; }
+        .btn-report:disabled { background-color: #4b5563; cursor: not-allowed; }
+
+        /* INTERFAZ POLICIAL */
+        .police-dashboard {
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+            height: 100%;
+            box-sizing: border-box;
+            overflow-y: auto;
+        }
+        .no-alert-box {
+            border: 2px dashed #334155;
+            padding: 40px 20px;
+            text-align: center;
+            color: #64748b;
+            border-radius: 8px;
+            margin-top: 50px;
+        }
+        .alert-active-box {
+            background-color: rgba(239, 68, 68, 0.1);
+            border: 2px solid #ef4444;
+            padding: 15px;
+            border-radius: 8px;
+            animation: pulse-border 2s infinite;
+        }
+        @keyframes pulse-border {
+            0% { border-color: #ef4444; }
+            50% { border-color: #7f1d1d; }
+            100% { border-color: #ef4444; }
+        }
+
+        .unit-list {
+            list-style: none;
+            padding: 0;
+            margin: 10px 0 0 0;
+        }
+        .unit-card {
+            background-color: #1e293b;
+            padding: 12px;
+            margin-bottom: 8px;
+            border-radius: 6px;
+            border: 1px solid #334155;
             display: flex;
             justify-content: space-between;
             align-items: center;
         }
-        .header h1 { font-size: 1.2rem; color: #f85149; letter-spacing: 1px; }
-        .header .badge-version { background: #21262d; padding: 4px 12px; border-radius: 20px; font-size: 0.6rem; color: #8b949e; border: 1px solid #30363d; }
-        
-        /* CONTENEDOR DE PÁGINAS */
-        .page {
-            display: none;
-            padding: 16px 20px 30px;
-            animation: fadeUp 0.3s ease;
-        }
-        .page.active { display: block; }
-        @keyframes fadeUp { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
-
-        /* MENÚ INFERIOR (TIPO APP) */
-        .bottom-nav {
-            position: fixed;
-            bottom: 0;
-            left: 0;
-            width: 100%;
-            background: #0d1117;
-            border-top: 1px solid #21262d;
-            display: flex;
-            justify-content: space-around;
-            padding: 8px 0 env(safe-area-inset-bottom);
-            z-index: 20;
-        }
-        .nav-item {
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            background: transparent;
-            border: none;
-            color: #8b949e;
-            font-size: 0.65rem;
-            padding: 4px 12px;
-            cursor: pointer;
-            transition: 0.2s;
-            border-radius: 8px;
-        }
-        .nav-item .icon { font-size: 1.8rem; line-height: 1; }
-        .nav-item.active { color: #f85149; }
-        .nav-item.active .icon { transform: scale(1.1); }
-
-        /* TARJETAS */
-        .card {
-            background: #161b22;
-            border: 1px solid #30363d;
-            border-radius: 16px;
-            padding: 18px;
-            margin-bottom: 20px;
-        }
-        .card-title { font-weight: 700; margin-bottom: 12px; font-size: 1.1rem; color: #f0f6fc; }
-        .card-sub { color: #8b949e; font-size: 0.85rem; margin-bottom: 15px; }
-
-        /* INPUTS Y FORMULARIOS */
-        label { display: block; font-weight: 600; margin: 15px 0 6px; font-size: 0.9rem; }
-        select, textarea, input[type="file"] {
-            width: 100%;
-            padding: 12px;
-            background: #0d1117;
-            border: 1px solid #30363d;
-            border-radius: 10px;
-            color: white;
-            font-size: 1rem;
-        }
-        textarea { height: 80px; resize: vertical; }
-        
-        /* BOTONES */
-        .btn {
-            width: 100%;
-            padding: 15px;
-            border: none;
-            border-radius: 50px;
-            font-weight: 700;
-            font-size: 1rem;
-            cursor: pointer;
-            margin-top: 16px;
-            transition: 0.2s;
-        }
-        .btn-danger { background: #da3633; color: white; }
-        .btn-danger:active { transform: scale(0.97); }
-        .btn-success { background: #238636; color: white; }
-        .btn-primary { background: #1f6feb; color: white; }
-        .btn-outline { background: transparent; border: 1px solid #30363d; color: white; }
-
-        /* LISTAS DE ITEMS */
-        .item-reporte {
-            background: #0d1117;
-            padding: 14px;
-            border-radius: 12px;
-            margin-bottom: 12px;
-            border-left: 5px solid #f85149;
-        }
-        .item-reporte.resuelto { border-left-color: #238636; opacity: 0.7; }
-        .item-reporte .row { display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 6px; }
-        .tag {
-            display: inline-block;
-            padding: 2px 12px;
-            border-radius: 30px;
-            font-size: 0.7rem;
-            font-weight: 600;
-        }
-        .tag-red { background: #da3633; color: white; }
-        .tag-yellow { background: #d29922; color: black; }
-        .tag-green { background: #238636; color: white; }
-        .tag-gray { background: #21262d; color: #8b949e; }
-
-        .grid-2 {
-            display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: 12px;
-        }
-        .grid-2 .poli-card {
-            background: #0d1117;
-            padding: 12px;
-            border-radius: 12px;
-            text-align: center;
-            border: 1px solid #21262d;
-        }
-        .poli-card .estado {
-            font-size: 0.7rem;
-            margin-top: 4px;
-        }
-
-        /* TABLA BASE DE DATOS */
-        .db-table { width: 100%; border-collapse: collapse; font-size: 0.8rem; }
-        .db-table th { text-align: left; padding: 8px 4px; border-bottom: 2px solid #30363d; }
-        .db-table td { padding: 8px 4px; border-bottom: 1px solid #21262d; }
-
-        /* UTILIDADES */
-        .mt-2 { margin-top: 12px; }
-        .text-center { text-align: center; }
-        .text-muted { color: #8b949e; font-size: 0.85rem; }
-        .flex { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
-        
-        /* SIMULADOR DE MAPA */
-        .mapa-simulado {
-            background: #0d1117;
-            height: 120px;
-            border-radius: 12px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            border: 1px dashed #30363d;
-            color: #8b949e;
+        .unit-name { font-weight: bold; font-size: 0.95rem; }
+        .unit-distance {
+            color: #10b981;
+            font-weight: bold;
+            background-color: rgba(16, 185, 129, 0.1);
+            padding: 3px 8px;
+            border-radius: 4px;
             font-size: 0.8rem;
-            margin: 10px 0;
         }
+        .badge-live-alert {
+            background-color: #ef4444;
+            color: white;
+            padding: 4px 8px;
+            border-radius: 4px;
+            font-weight: bold;
+            font-size: 0.8rem;
+            animation: blink 1s infinite;
+        }
+        @keyframes blink { 0%{opacity:1;} 50%{opacity:0.3;} 100%{opacity:1;} }
     </style>
 </head>
 <body>
 
-<!-- ========== BARRA SUPERIOR ========== -->
-<div class="header">
-    <h1>👁️ OJO DE LOS JUSTOS</h1>
-    <span class="badge-version">PROTOTIPO DEMO</span>
-</div>
-
-<!-- ========== PÁGINA 1: CIUDADANO ========== -->
-<div id="page-ciudadano" class="page active">
-    <div class="card">
-        <div class="card-title">📝 Reporte Anónimo</div>
-        <div class="card-sub">Simula un reporte desde tu celular. Todo es anónimo.</div>
-        <label>Tipo de incidente</label>
-        <select id="tipoIncidente">
-            <option>💊 Venta de sustancias</option>
-            <option>🔫 Presencia de armas</option>
-            <option>⛓️ Retención ilegal</option>
-            <option>👊 Riña callejera</option>
-            <option>🕵️ Prófugo avistado</option>
-        </select>
-        <label>Comentario</label>
-        <textarea id="comentario" placeholder="Ej: 3 sujetos armados en la esquina..."></textarea>
-        <label>Adjuntar evidencia (simulado)</label>
-        <input type="file" id="evidencia" accept="image/,video/,audio/*">
-        <button class="btn btn-danger" onclick="enviarReporte()">🚨 ENVIAR ALERTA</button>
-        <div id="mensajeCiudadano" class="text-muted mt-2"></div>
-    </div>
-    <div class="card">
-        <div class="card-title">📋 Mis Reportes</div>
-        <div id="misReportes" class="text-muted">Aún no has enviado nada.</div>
-    </div>
-</div>
-
-<!-- ========== PÁGINA 2: POLICÍA ========== -->
-<div id="page-policia" class="page">
-    <div class="card">
-        <div class="card-title">📡 Los 10 más cercanos</div>
-        <div class="card-sub">Agentes que reciben la alerta en bloque.</div>
-        <div class="grid-2" id="listaPolicias">
-            <!-- Se llena con JS -->
+    <div id="vista-ciudadano" class="panel-split">
+        <div class="panel-header">
+            <span>1. Interfaz Ciudadana</span>
+            <span class="badge badge-citizen">Anónimo (Sin Registro)</span>
         </div>
-    </div>
-    <div class="card">
-        <div class="card-title">🚨 Reportes Activos</div>
-        <div id="listaReportesPolicia" class="text-muted">Esperando reportes...</div>
-    </div>
-</div>
-
-<!-- ========== PÁGINA 3: CENTRAL ========== -->
-<div id="page-central" class="page">
-    <div class="grid-2">
-        <div class="card">
-            <div class="card-title">📊 Dashboard</div>
-            <p>Total: <strong id="totalReportes">0</strong></p>
-            <p>Pendientes: <strong id="totalPendientes">0</strong></p>
-            <p>Resueltos: <strong id="totalResueltos">0</strong></p>
-            <div class="mapa-simulado">🗺️ Mapa de calor (simulado)</div>
-            <div class="card-title" style="font-size:0.9rem;">Estado Agentes</div>
-            <div id="estadoAgentesCentral"></div>
-        </div>
-        <div class="card">
-            <div class="card-title">🗃️ Base de Datos</div>
-            <div id="baseDatosCentral" style="max-height:300px; overflow-y:auto;">
-                <span class="text-muted">Sin registros.</span>
+        <div class="panel-body">
+            <div id="map"></div>
+            
+            <div class="citizen-controls">
+                <p style="margin: 0 0 10px 0; font-size: 0.85rem; color: #9ca3af; text-align: center;">
+                    Paso 1: Toca el mapa para fijar las coordenadas del delito de forma discreta.
+                </p>
+                <button id="btn-enviar" class="btn-report" disabled onclick="dispararAlertaPolicial()">
+                    Enviar Reporte Táctico Anónimo
+                </button>
             </div>
         </div>
     </div>
-</div>
 
-<!-- ========== MENÚ INFERIOR (NAV) ========== -->
-<div class="bottom-nav">
-    <button class="nav-item active" onclick="cambiarPagina('ciudadano', this)">
-        <span class="icon">👤</span>
-        <span>Ciudadano</span>
-    </button>
-    <button class="nav-item" onclick="cambiarPagina('policia', this)">
-        <span class="icon">👮</span>
-        <span>Policía</span>
-    </button>
-    <button class="nav-item" onclick="cambiarPagina('central', this)">
-        <span class="icon">📊</span>
-        <span>Central</span>
-    </button>
-</div>
-
-<script>
-    // ==========================================================
-    // ===== CEREBRO DE LA APLICACIÓN (SIMULADOR) =====
-    // ==========================================================
-
-    // Base de datos local (se borra al recargar)
-    let reportes = [];
-    let idCounter = 1;
-
-    // 10 Policías simulados
-    const POLICIAS = [
-        { id: 'P-01', nombre: 'Carlos R.', estado: 'Disponible' },
-        { id: 'P-02', nombre: 'Laura G.', estado: 'Disponible' },
-        { id: 'P-03', nombre: 'Andrés H.', estado: 'Disponible' },
-        { id: 'P-04', nombre: 'Marta D.', estado: 'Disponible' },
-        { id: 'P-05', nombre: 'Jorge L.', estado: 'Disponible' },
-        { id: 'P-06', nombre: 'Sofía R.', estado: 'Disponible' },
-        { id: 'P-07', nombre: 'Luis T.', estado: 'Disponible' },
-        { id: 'P-08', nombre: 'Ana M.', estado: 'Disponible' },
-        { id: 'P-09', nombre: 'Diego C.', estado: 'Disponible' },
-        { id: 'P-10', nombre: 'Elena P.', estado: 'Disponible' }
-    ];
-
-    // --- Función para cambiar de página (APP) ---
-    function cambiarPagina(pageId, btn) {
-        // Ocultar todas
-        document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
-        // Mostrar la seleccionada
-        document.getElementById('page-' + pageId).classList.add('active');
-        // Cambiar estilo del nav
-        document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
-        if (btn) btn.classList.add('active');
-        
-        // Actualizar datos al cambiar
-        actualizarVistas();
-    }
-
-    // --- Función ENVIAR REPORTE (Ciudadano) ---
-    function enviarReporte() {
-        const tipo = document.getElementById('tipoIncidente').value;
-        const comentario = document.getElementById('comentario').value.trim() || 'Sin detalles.';
-        const archivo = document.getElementById('evidencia').files[0];
-        const nombreArchivo = archivo ? archivo.name : 'Sin evidencia';
-
-        const nuevo = {
-            id: idCounter++,
-            tipo: tipo,
-            comentario: comentario,
-            evidencia: nombreArchivo,
-            estado: 'Pendiente', // Pendiente -> En camino -> Resuelto
-            policiaAsignado: null,
-            timestamp: new Date().toLocaleTimeString()
-        };
-
-        reportes.push(nuevo);
-        document.getElementById('mensajeCiudadano').innerHTML = ✅ Alerta #${nuevo.id} enviada. Notificando a los 10 agentes...;
-
-        // SIMULAR: Asignación automática a un policía disponible después de 1.5 segundos
-        setTimeout(() => {
-            const pendiente = reportes.find(r => r.id === nuevo.id && r.estado === 'Pendiente');
-            if (pendiente) {
-                const libre = POLICIAS.find(p => p.estado === 'Disponible');
-                if (libre) {
-                    pendiente.estado = 'En camino';
-                    pendiente.policiaAsignado = libre.nombre;
-                    libre.estado = 'Ocupado';
-                } else {
-                    // Si no hay libres, queda pendiente (simulación)
-                }
-                actualizarVistas();
-            }
-        }, 1500);
-
-        // Limpiar archivo (opcional) y actualizar
-        document.getElementById('evidencia').value = '';
-        actualizarVistas();
-    }
-
-    // --- Función LLEGAR AL LUGAR (Policía) ---
-    function llegarAlLugar(reporteId) {
-        // Solicitar PIN
-        const pin = prompt('🔐 Ingrese PIN Institucional (Simulado: 1234):');
-        if (pin !== '1234') {
-            alert('❌ PIN INCORRECTO. Acción cancelada.');
-            return;
-        }
-
-        const reporte = reportes.find(r => r.id === reporteId);
-        if (!reporte) return;
-        if (reporte.estado === 'Resuelto') { alert('Caso ya cerrado.'); return; }
-
-        // Marcar como resuelto
-        reporte.estado = 'Resuelto';
-        // Liberar al policía
-        if (reporte.policiaAsignado) {
-            const poli = POLICIAS.find(p => p.nombre === reporte.policiaAsignado);
-            if (poli) poli.estado = 'Disponible';
-        }
-        alert('✅ Caso cerrado exitosamente. ¡Buen trabajo!');
-        actualizarVistas();
-    }
-
-    // --- Funciones de RENDERIZADO (actualizan las vistas) ---
-
-    function actualizarVistas() {
-        actualizarPolicias();
-        actualizarCentral();
-        actualizarMisReportes();
-    }
-
-    // Vista de Policías
-    function actualizarPolicias() {
-        // 1. Los 10 agentes
-        let htmlPoli = '';
-        POLICIAS.forEach(p => {
-            const color = p.estado === 'Disponible' ? '🟢' : (p.estado === 'Ocupado' ? '🟡' : '🔴');
-            htmlPoli += `<div class="poli-card">
-                <strong>${p.nombre}</strong><br>
-                <span class="estado">${color} ${p.estado}</span>
-            </div>`;
-        });
-        document.getElementById('listaPolicias').innerHTML = htmlPoli;
-
-        // 2. Reportes activos para los policías
-        if (reportes.length === 0) {
-            document.getElementById('listaReportesPolicia').innerHTML = '<span class="text-muted">No hay reportes.</span>';
-            return;
-        }
-
-        let htmlRep = '';
-        // Mostrar los más recientes primero
-        const copia = [...reportes].reverse();
-        copia.forEach(r => {
-            const esResuelto = r.estado === 'Resuelto';
-            const tagColor = r.estado === 'Pendiente' ? 'tag-red' : (r.estado === 'En camino' ? 'tag-yellow' : 'tag-green');
-            htmlRep += `
-                <div class="item-reporte ${esResuelto ? 'resuelto' : ''}">
-                    <div class="row">
-                        <div><strong>#${r.id}</strong> ${r.tipo}</div>
-                        <span class="tag ${tagColor}">${r.estado}</span>
-                    </div>
-                    <div style="font-size:0.85rem; color:#8b949e; margin:6px 0;">${r.comentario}</div>
-                    <div class="row" style="font-size:0.8rem;">
-                        <span>👮 ${r.policiaAsignado || 'Sin asignar'}</span>
-                        <span>⏱️ ${r.timestamp}</span>
-                    </div>
-                    ${r.estado === 'En camino' ? `
-                        <button class="btn btn-success" style="padding:10px; margin-top:10px; width:100%;" onclick="llegarAlLugar(${r.id})">
-                            📍 Llegué al lugar (verificar PIN)
-                        </button>
-                    ` : ''}
-                    ${r.estado === 'Pendiente' ? '<span class="text-muted" style="font-size:0.8rem;">⏳ Esperando asignación...</span>' : ''}
+    <div id="vista-policia" class="panel-split">
+        <div class="panel-header">
+            <span>2. Consola de Despacho Operativo</span>
+            <span class="badge badge-police">Centro de Monitoreo C4</span>
+        </div>
+        <div class="panel-body" style="background-color: #0b0f19;">
+            <div class="police-dashboard">
+                
+                <div id="no-alert" class="no-alert-box">
+                    📡 ESCANEANDO PERÍMETRO URBANO EN VIVO...<br>
+                    <span style="font-size: 0.8rem; display:block; margin-top:10px; color:#475569;">
+                        Esperando que ingrese una alerta desde el cuadrante del ciudadano.
+                    </span>
                 </div>
-            `;
+
+                <div id="alert-active" class="alert-active-box" style="display: none;">
+                    <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #ef4444; padding-bottom: 8px;">
+                        <span class="badge-live-alert">🚨 NUEVA ALERTA RADIAL ENTRANTE</span>
+                        <span style="font-size: 0.85rem; font-weight: bold;" id="display-coords"></span>
+                    </div>
+                    <p style="font-size: 0.9rem; color: #cbd5e1; margin: 12px 0 4px 0;">
+                        <strong>Algoritmo Radial Completo:</strong> Reporte distribuído de forma simultánea a las 10 unidades de cuadrante con mayor ventaja geográfica:
+                    </p>
+                    <ul id="police-units" class="unit-list"></ul>
+                </div>
+
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/ol@v8.2.0/dist/ol.js"></script>
+    <script>
+        // Coordenadas simuladas fijas de Patrullas en Bogotá
+        const basePatrullas = [
+            { id: "Patrulla Cuadrante 12 - Chapinero Central", lat: 4.6486, lon: -74.0611 },
+            { id: "Binomio de Motos 04 - Chapinero Alto", lat: 4.6521, lon: -74.0553 },
+            { id: "Patrulla Cuadrante 02 - Teusaquillo", lat: 4.6281, lon: -74.0782 },
+            { id: "Unidad Lince Táctica - Parkway", lat: 4.6325, lon: -74.0721 },
+            { id: "Patrulla Cuadrante 45 - Centro Internacional", lat: 4.6156, lon: -74.0684 },
+            { id: "Patrulla Cuadrante 08 - Usaquén", lat: 4.7012, lon: -74.0305 },
+            { id: "Binomio de Motos 19 - Unicentro", lat: 4.7025, lon: -74.0415 },
+            { id: "Patrulla Cuadrante 33 - Suba Centro", lat: 4.7412, lon: -74.0845 },
+            { id: "Patrulla Cuadrante 11 - Engativá", lat: 4.6912, lon: -74.1124 },
+            { id: "Patrulla Cuadrante 07 - Fontibón", lat: 4.6654, lon: -74.1385 },
+            { id: "Unidad Operativa Movil - Salitre", lat: 4.6542, lon: -74.1085 },
+            { id: "Patrulla Cuadrante 21 - Kennedy", lat: 4.6184, lon: -74.1524 },
+            { id: "Binomio de Motos 55 - Av. Primera de Mayo", lat: 4.5945, lon: -74.1215 },
+            { id: "Patrulla Cuadrante 09 - Bosa", lat: 4.6085, lon: -74.1945 },
+            { id: "Patrulla Cuadrante 60 - Ciudad Bolívar", lat: 4.5724, lon: -74.1553 }
+        ];
+
+        let coordenadaSeleccionada = null;
+
+        // Inicializar mapa centrado en Bogotá
+        const map = new ol.Map({
+            target: 'map',
+            layers: [
+                new ol.layer.Tile({ source: new ol.source.OSM() })
+            ],
+            view: new ol.View({
+                center: ol.proj.fromLonLat([-74.0721, 4.6325]),
+                zoom: 12
+            })
         });
-        document.getElementById('listaReportesPolicia').innerHTML = htmlRep;
-    }
 
-    // Vista de Central
-    function actualizarCentral() {
-        const total = reportes.length;
-        const resueltos = reportes.filter(r => r.estado === 'Resuelto').length;
-        const pendientes = reportes.filter(r => r.estado !== 'Resuelto').length;
-
-        document.getElementById('totalReportes').textContent = total;
-        document.getElementById('totalPendientes').textContent = pendientes;
-        document.getElementById('totalResueltos').textContent = resueltos;
-
-        // Estado agentes central
-        let htmlAg = '';
-        POLICIAS.forEach(p => {
-            const icon = p.estado === 'Disponible' ? '🟢' : (p.estado === 'Ocupado' ? '🟡' : '🔴');
-            htmlAg += `<div style="display:flex; justify-content:space-between; border-bottom:1px solid #21262d; padding:4px 0;">
-                <span>${p.nombre}</span> <span>${icon} ${p.estado}</span>
-            </div>`;
+        // Capturar clic del ciudadano
+        map.on('click', function (evt) {
+            const coords = ol.proj.toLonLat(evt.coordinate);
+            coordenadaSeleccionada = { lon: coords[0], lat: coords[1] };
+            
+            // Habilitar el botón de envío tras seleccionar el punto
+            const btn = document.getElementById('btn-enviar');
+            btn.removeAttribute('disabled');
+            btn.innerText = "Enviar Reporte (Ubicación Fijada)";
+            btn.style.backgroundColor = "#22c55e"; // Cambia a verde instructivo
         });
-        document.getElementById('estadoAgentesCentral').innerHTML = htmlAg;
 
-        // Base de Datos (Tabla)
-        if (reportes.length === 0) {
-            document.getElementById('baseDatosCentral').innerHTML = '<span class="text-muted">No hay registros en la base de datos.</span>';
-            return;
+        // Fórmula Matemática Haversine (Cálculo de Distancias GPS en KM)
+        function calcularDistanciaKM(lat1, lon1, lat2, lon2) {
+            const R = 6371; 
+            const dLat = (lat2 - lat1) * Math.PI / 180;
+            const dLon = (lon2 - lon1) * Math.PI / 180;
+            const a = Math.sin(dLat/2) * Math.sin(dLat/2) +
+                      Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) *
+                      Math.sin(dLon/2) * Math.sin(dLon/2);
+            const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+            return R * c; 
         }
-        let htmlDB = `<table class="db-table">
-            <tr><th>ID</th><th>Tipo</th><th>Estado</th><th>Policía</th></tr>`;
-        const copiaDB = [...reportes].reverse();
-        copiaDB.forEach(r => {
-            const icon = r.estado === 'Resuelto' ? '✅' : (r.estado === 'En camino' ? '⏳' : '❌');
-            htmlDB += <tr><td>${r.id}</td><td>${r.tipo}</td><td>${icon} ${r.estado}</td><td>${r.policiaAsignado || 'N/A'}</td></tr>;
-        });
-        htmlDB += '</table>';
-        document.getElementById('baseDatosCentral').innerHTML = htmlDB;
-    }
 
-    // Vista de "Mis Reportes" (Ciudadano)
-    function actualizarMisReportes() {
-        const cont = document.getElementById('misReportes');
-        if (reportes.length === 0) { cont.innerHTML = 'Aún no has enviado nada.'; return; }
-        let html = '';
-        const copia = [...reportes].reverse();
-        copia.forEach(r => {
-            html += `<div style="background:#0d1117; padding:10px; border-radius:10px; margin-bottom:8px; border-left:3px solid #f85149;">
-                <strong>#${r.id}</strong> ${r.tipo} 
-                <span class="tag ${r.estado === 'Resuelto' ? 'tag-green' : 'tag-red'}" style="font-size:0.6rem;">${r.estado}</span>
-                <div style="font-size:0.8rem; color:#8b949e;">${r.comentario}</div>
-            </div>`;
-        });
-        cont.innerHTML = html;
-    }
+        // ACCIÓN CLAVE: El Ciudadano envía y la Policía lo ve de inmediato
+        function dispararAlertaPolicial() {
+            if (!coordenadaSeleccionada) return;
 
-    // --- Carga de datos de muestra para que no se vea vacío ---
-    function cargarMuestra() {
-        const m1 = { id: idCounter++, tipo: '💊 Venta de sustancias', comentario: 'Esquina calle 10 con carrera 5.', evidencia: 'N/A', estado: 'Resuelto', policiaAsignado: 'Carlos R.', timestamp: '10:30:20' };
-        const m2 = { id: idCounter++, tipo: '🔫 Presencia de armas', comentario: 'Taxi blanco con dos sujetos armados.', evidencia: 'N/A', estado: 'En camino', policiaAsignado: 'Laura G.', timestamp: '11:15:45' };
-        reportes.push(m1, m2);
-        POLICIAS.find(p => p.nombre === 'Carlos R.').estado = 'Disponible';
-        POLICIAS.find(p => p.nombre === 'Laura G.').estado = 'Ocupado';
-        actualizarVistas();
-    }
+            const latCiu = coordenadaSeleccionada.lat;
+            const lonCiu = coordenadaSeleccionada.lon;
 
-    cargarMuestra();
-</script>
+            // Mostrar coordenadas en la pantalla del policía
+            document.getElementById('display-coords').innerText = `GPS: ${latCiu.toFixed(4)}, ${lonCiu.toFixed(4)}`;
+
+            // Procesar backend en vivo: mapear distancias contra el punto de la denuncia
+            const calculos = basePatrullas.map(p => {
+                const dist = calcularDistanciaKM(latCiu, lonCiu, p.lat, p.lon);
+                return { name: p.id, distancia: dist };
+            });
+
+            // Ordenar por cercanía (menor a mayor)
+            calculos.sort((a, b) => a.distancia - b.distancia);
+
+            // Filtrar estrictamente el Top 10 solicitado
+            const top10 = calculos.slice(0, 10);
+
+            // Renderizar la lista dinámicamente en el lado de la policía
+            const listContainer = document.getElementById('police-units');
+            listContainer.innerHTML = ''; // Vaciar alertas previas
+
+            top10.forEach(u => {
+                const li = document.createElement('li');
+                li.className = 'unit-card';
+
+                const textoDistancia = u.distancia < 1 
+                    ? `${(u.distancia * 1000).toFixed(0)} metros` 
+                    : `${u.distancia.toFixed(2)} km`;
+
+                li.innerHTML = `
+                    <span class="unit-name">${u.name}</span>
+                    <span class="unit-distance">a ${textoDistancia}</span>
+                `;
+                listContainer.appendChild(li);
+            });
+
+            // Cambiar estados visuales en la consola de la policía
+            document.getElementById('no-alert').style.display = 'none';
+            document.getElementById('alert-active').style.display = 'block';
+
+            // Resetear el botón del ciudadano para simular el éxito del envío discreto
+            const btn = document.getElementById('btn-enviar');
+            btn.setAttribute('disabled', 'true');
+            btn.innerText = "Reporte Transmitido con Éxito";
+            btn.style.backgroundColor = "#4b5563";
+        }
+    </script>
 </body>
 </html>
