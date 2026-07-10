@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>El Ojo de los Justos - Funcional</title>
+    <title>Ojo de los Justos</title>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     
     <style>
@@ -24,14 +24,12 @@
         .card-title { font-weight: 700; margin-bottom: 12px; font-size: 1.1rem; color: #f0f6fc; }
         .card-sub { color: #8b949e; font-size: 0.85rem; margin-bottom: 15px; }
         label { display: block; font-weight: 600; margin: 15px 0 6px; font-size: 0.9rem; }
-        select, textarea, input[type="file"] { width: 100%; padding: 12px; background: #0d1117; border: 1px solid #30363d; border-radius: 10px; color: white; font-size: 1rem; }
+        select, textarea { width: 100%; padding: 12px; background: #0d1117; border: 1px solid #30363d; border-radius: 10px; color: white; font-size: 1rem; }
         textarea { height: 80px; resize: vertical; }
         .btn { width: 100%; padding: 15px; border: none; border-radius: 50px; font-weight: 700; font-size: 1rem; cursor: pointer; margin-top: 16px; transition: 0.2s; }
         .btn-danger { background: #da3633; color: white; }
         .btn-danger:active { transform: scale(0.97); }
-        .btn-success { background: #238636; color: white; }
         .item-reporte { background: #0d1117; padding: 14px; border-radius: 12px; margin-bottom: 12px; border-left: 5px solid #f85149; }
-        .item-reporte.resuelto { border-left-color: #238636; opacity: 0.7; }
         .item-reporte .row { display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 6px; }
         .tag { display: inline-block; padding: 2px 12px; border-radius: 30px; font-size: 0.7rem; font-weight: 600; }
         .tag-red { background: #da3633; color: white; }
@@ -40,25 +38,20 @@
         .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
         .grid-2 .poli-card { background: #0d1117; padding: 12px; border-radius: 12px; text-align: center; border: 1px solid #21262d; }
         .poli-card .estado { font-size: 0.7rem; margin-top: 4px; }
-        .db-table { width: 100%; border-collapse: collapse; font-size: 0.8rem; }
-        .db-table th { text-align: left; padding: 8px 4px; border-bottom: 2px solid #30363d; }
-        .db-table td { padding: 8px 4px; border-bottom: 1px solid #21262d; }
-        .mt-2 { margin-top: 12px; }
         .text-muted { color: #8b949e; font-size: 0.85rem; }
-        .mapa-simulado { background: #0d1117; height: 120px; border-radius: 12px; display: flex; align-items: center; justify-content: center; border: 1px dashed #30363d; color: #8b949e; font-size: 0.8rem; margin: 10px 0; }
     </style>
 </head>
 <body>
 
 <div class="header">
     <h1>👁️ OJO DE LOS JUSTOS</h1>
-    <span class="badge-version">APP / DEMO</span>
+    <span class="badge-version">BETA 1.0</span>
 </div>
 
 <div id="page-ciudadano" class="page active">
     <div class="card">
         <div class="card-title">📝 Reporte Anónimo</div>
-        <div class="card-sub">Simula un reporte desde tu celular. Todo es anónimo.</div>
+        <div class="card-sub">Tu identidad está protegida.</div>
         <label>Tipo de incidente</label>
         <select id="tipoIncidente">
             <option>💊 Venta de sustancias</option>
@@ -68,202 +61,82 @@
             <option>🕵️ Prófugo avistado</option>
         </select>
         <label>Comentario</label>
-        <textarea id="comentario" placeholder="Ej: 3 sujetos armados en la esquina..."></textarea>
+        <textarea id="comentario" placeholder="Ej: 3 sujetos en la esquina..."></textarea>
         <button class="btn btn-danger" onclick="enviarReporte()">🚨 ENVIAR ALERTA</button>
-        <div id="mensajeCiudadano" class="text-muted mt-2"></div>
+        <div id="mensajeCiudadano" style="margin-top: 12px; font-size: 0.9rem;"></div>
     </div>
     <div class="card">
-        <div class="card-title">📋 Mis Reportes</div>
-        <div id="misReportes" class="text-muted">Aún no has enviado nada.</div>
+        <div class="card-title">📋 Mis Alertas Enviadas</div>
+        <div id="misReportes" class="text-muted">Aún no hay registros.</div>
     </div>
 </div>
 
 <div id="page-policia" class="page">
     <div class="card">
-        <div class="card-title">📡 Los 10 más cercanos</div>
-        <div class="card-sub">Agentes que reciben la alerta en bloque.</div>
-        <div class="grid-2" id="listaPolicias"></div>
-    </div>
-    <div class="card">
-        <div class="card-title">🚨 Reportes Activos</div>
+        <div class="card-title">🚨 Reportes Activos en tu Zona</div>
         <div id="listaReportesPolicia" class="text-muted">Esperando reportes...</div>
     </div>
 </div>
 
 <div id="page-central" class="page">
-    <div class="grid-2">
-        <div class="card">
-            <div class="card-title">📊 Dashboard</div>
-            <p>Total: <strong id="totalReportes">0</strong></p>
-            <p>Pendientes: <strong id="totalPendientes">0</strong></p>
-            <p>Resueltos: <strong id="totalResueltos">0</strong></p>
-            <div class="mapa-simulado">🗺️ Mapa de calor (simulado)</div>
-            <div class="card-title" style="font-size:0.9rem;">Estado Agentes</div>
-            <div id="estadoAgentesCentral"></div>
-        </div>
-        <div class="card">
-            <div class="card-title">🗃️ Base de Datos</div>
-            <div id="baseDatosCentral" style="max-height:300px; overflow-y:auto;">
-                <span class="text-muted">Sin registros.</span>
-            </div>
+    <div class="card">
+        <div class="card-title">📊 Dashboard de Monitoreo</div>
+        <p>Total Alertas: <strong id="totalReportes">0</strong></p>
+        <div style="margin-top:15px; padding:20px; background:#0d1117; border-radius:10px; text-align:center; border:1px dashed #30363d; color:#8b949e;">
+            🗺️ Mapa GPS (Próximamente)
         </div>
     </div>
 </div>
 
 <div class="bottom-nav">
     <button class="nav-item active" onclick="cambiarPagina('ciudadano', this)">
-        <span class="icon">👤</span>
-        <span>Ciudadano</span>
+        <span class="icon">👤</span><span>Ciudadano</span>
     </button>
     <button class="nav-item" onclick="cambiarPagina('policia', this)">
-        <span class="icon">👮</span>
-        <span>Policía</span>
+        <span class="icon">👮</span><span>Policía</span>
     </button>
     <button class="nav-item" onclick="cambiarPagina('central', this)">
-        <span class="icon">📊</span>
-        <span>Central</span>
+        <span class="icon">📊</span><span>Central</span>
     </button>
 </div>
 
 <script>
-    // ==========================================================
-    // ===== CONFIGURACIÓN DE SUPABASE =====
-    // ==========================================================
-    const supabaseUrl = 'https://TU_PROYECTO.supabase.co'; // 🔴 REEMPLAZA ESTO LUEGO
-    const supabaseKey = 'TU_CLAVE_ANONIMA_AQUI'; // 🔴 REEMPLAZA ESTO LUEGO
-    
-    // Verificamos si ya pusiste tus claves reales
-    const usarSupabase = !supabaseUrl.includes('TU_PROYECTO'); 
-    let client = null;
-    
-    if (usarSupabase) {
-        const { createClient } = supabase;
-        client = createClient(supabaseUrl, supabaseKey);
-    }
-
-    // Datos locales (Funcionan como respaldo si no hay Supabase)
     let reportes = [];
     let idCounter = 1;
-    const POLICIAS = [
-        { id: 'P-01', nombre: 'Carlos R.', estado: 'Disponible' },
-        { id: 'P-02', nombre: 'Laura G.', estado: 'Disponible' },
-        { id: 'P-03', nombre: 'Andrés H.', estado: 'Disponible' },
-        { id: 'P-04', nombre: 'Marta D.', estado: 'Disponible' }
-    ];
 
-    // --- Navegación ---
     function cambiarPagina(pageId, btn) {
         document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
         document.getElementById('page-' + pageId).classList.add('active');
         document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
-        if (btn) btn.classList.add('active');
-        actualizarVistas();
+        btn.classList.add('active');
     }
 
-    // --- ENVIAR REPORTE ---
-    async function enviarReporte() {
+    function enviarReporte() {
         const tipo = document.getElementById('tipoIncidente').value;
-        const comentario = document.getElementById('comentario').value.trim() || 'Sin detalles.';
+        const comentario = document.getElementById('comentario').value.trim() || 'Sin comentarios.';
         
-        const btn = document.querySelector('.btn-danger');
-        btn.textContent = 'Enviando...';
-        btn.disabled = true;
-
-        if (usarSupabase) {
-            // LÓGICA BASE DE DATOS REAL
-            const { data, error } = await client.from('reportes').insert([{ tipo: tipo, comentario: comentario, estado: 'Pendiente' }]);
-            if (error) {
-                document.getElementById('mensajeCiudadano').innerHTML = '❌ Error al conectar con la base de datos.';
-            } else {
-                document.getElementById('mensajeCiudadano').innerHTML = '✅ Alerta enviada exitosamente.';
-                document.getElementById('comentario').value = ''; 
-            }
-        } else {
-            // LÓGICA DEL SIMULADOR
-            const nuevo = { id: idCounter++, tipo: tipo, comentario: comentario, estado: 'Pendiente', policiaAsignado: null, timestamp: new Date().toLocaleTimeString() };
-            reportes.push(nuevo);
-            document.getElementById('mensajeCiudadano').innerHTML = `✅ Alerta #${nuevo.id} enviada (Modo Simulador).`;
-            
-            setTimeout(() => {
-                const pendiente = reportes.find(r => r.id === nuevo.id && r.estado === 'Pendiente');
-                const libre = POLICIAS.find(p => p.estado === 'Disponible');
-                if (pendiente && libre) {
-                    pendiente.estado = 'En camino';
-                    pendiente.policiaAsignado = libre.nombre;
-                    libre.estado = 'Ocupado';
-                    actualizarVistas();
-                }
-            }, 1500);
-        }
-
-        btn.textContent = '🚨 ENVIAR ALERTA';
-        btn.disabled = false;
+        const nuevo = { id: idCounter++, tipo: tipo, comentario: comentario, estado: 'Pendiente' };
+        reportes.push(nuevo);
+        
+        document.getElementById('mensajeCiudadano').innerHTML = `✅ Alerta #${nuevo.id} recibida por la central.`;
+        document.getElementById('comentario').value = '';
+        
         actualizarVistas();
     }
 
-    // --- RENDERIZADO VISUAL ---
     function actualizarVistas() {
-        // Policias
-        let htmlPoli = '';
-        POLICIAS.forEach(p => {
-            const color = p.estado === 'Disponible' ? '🟢' : '🔴';
-            htmlPoli += `<div class="poli-card"><strong>${p.nombre}</strong><br><span class="estado">${color} ${p.estado}</span></div>`;
-        });
-        document.getElementById('listaPolicias').innerHTML = htmlPoli;
-
-        // Lista Reportes (Policía)
         let htmlRep = '';
         [...reportes].reverse().forEach(r => {
-            const tagColor = r.estado === 'Pendiente' ? 'tag-red' : (r.estado === 'En camino' ? 'tag-yellow' : 'tag-green');
             htmlRep += `<div class="item-reporte">
-                <div class="row"><div><strong>#${r.id}</strong> ${r.tipo}</div><span class="tag ${tagColor}">${r.estado}</span></div>
-                <div style="font-size:0.85rem; color:#8b949e; margin:6px 0;">${r.comentario}</div>
-                <div class="row" style="font-size:0.8rem;"><span>👮 ${r.policiaAsignado || 'Sin asignar'}</span></div>
+                <div class="row"><div><strong>#${r.id}</strong> ${r.tipo}</div><span class="tag tag-red">${r.estado}</span></div>
+                <div style="font-size:0.85rem; color:#8b949e; margin-top:6px;">${r.comentario}</div>
             </div>`;
         });
-        document.getElementById('listaReportesPolicia').innerHTML = htmlRep || '<span class="text-muted">No hay reportes.</span>';
-
-        // Dashboard Central
+        
+        document.getElementById('listaReportesPolicia').innerHTML = htmlRep || 'Sin reportes.';
+        document.getElementById('misReportes').innerHTML = htmlRep || 'Aún no hay registros.';
         document.getElementById('totalReportes').textContent = reportes.length;
-        document.getElementById('totalPendientes').textContent = reportes.filter(r => r.estado !== 'Resuelto').length;
-        document.getElementById('totalResueltos').textContent = reportes.filter(r => r.estado === 'Resuelto').length;
-
-        // Agentes Central
-        let htmlAg = '';
-        POLICIAS.forEach(p => {
-            const icon = p.estado === 'Disponible' ? '🟢' : '🔴';
-            htmlAg += `<div style="display:flex; justify-content:space-between; border-bottom:1px solid #21262d; padding:4px 0;"><span>${p.nombre}</span> <span>${icon} ${p.estado}</span></div>`;
-        });
-        document.getElementById('estadoAgentesCentral').innerHTML = htmlAg;
-
-        // Tabla Central
-        let htmlDB = `<table class="db-table"><tr><th>ID</th><th>Tipo</th><th>Estado</th></tr>`;
-        [...reportes].reverse().forEach(r => {
-            htmlDB += `<tr><td>${r.id}</td><td>${r.tipo}</td><td>${r.estado}</td></tr>`;
-        });
-        htmlDB += '</table>';
-        document.getElementById('baseDatosCentral').innerHTML = reportes.length ? htmlDB : '<span class="text-muted">Sin registros.</span>';
-
-        // Mis Reportes Ciudadano
-        let htmlMis = '';
-        [...reportes].reverse().forEach(r => {
-            htmlMis += `<div style="background:#0d1117; padding:10px; border-radius:10px; margin-bottom:8px; border-left:3px solid #f85149;">
-                <strong>#${r.id}</strong> ${r.tipo} <span class="tag tag-red" style="font-size:0.6rem;">${r.estado}</span>
-            </div>`;
-        });
-        document.getElementById('misReportes').innerHTML = htmlMis || 'Aún no has enviado nada.';
     }
-
-    // Inicializar app
-    if (!usarSupabase) {
-        // Cargar datos de muestra si estamos en el simulador
-        reportes.push({ id: idCounter++, tipo: '💊 Venta de sustancias', comentario: 'Esquina 5', estado: 'Resuelto', policiaAsignado: 'Carlos R.', timestamp: '10:30' });
-        actualizarVistas();
-    } else {
-        // Aquí iría la lógica de escuchar a Supabase en tiempo real
-        console.log("Supabase detectado. Configuración lista para expandir.");
-    }
-
 </script>
 </body>
 </html>
